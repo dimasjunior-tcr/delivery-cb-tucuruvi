@@ -543,42 +543,17 @@
     }
   }
 
-  function isPageVisible() {
-    return document.visibilityState === 'visible' && document.hasFocus();
-  }
-
   function scheduleAutoAck() {
     clearTimeout(autoAckTimer);
     const aguardando = orders.filter(o => o.status === 'aguardando');
     if (aguardando.length === 0) return;
-    // Só agenda se a página estiver visível e com foco
-    if (!isPageVisible()) return;
     autoAckTimer = setTimeout(() => {
-      // Confirma novamente que ainda está visível no momento do disparo
-      if (!isPageVisible()) return;
       stopAlarm();
       aguardando.forEach(o => {
         socket.emit('ack-order', { role: session.role, id: o.id });
       });
-    }, 3000);
+    }, 10000);
   }
-
-  // Quando o delivery volta para a aba/janela, tenta o auto-ack
-  document.addEventListener('visibilitychange', () => {
-    if (session && session.role === 'delivery' && document.visibilityState === 'visible') {
-      scheduleAutoAck();
-    } else {
-      clearTimeout(autoAckTimer);
-    }
-  });
-
-  window.addEventListener('focus', () => {
-    if (session && session.role === 'delivery') scheduleAutoAck();
-  });
-
-  window.addEventListener('blur', () => {
-    clearTimeout(autoAckTimer);
-  });
 
   function renderRecepcao() {
     const waiting  = orders.filter(o => o.status === 'aguardando');
