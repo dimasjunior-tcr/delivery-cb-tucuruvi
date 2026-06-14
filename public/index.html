@@ -535,9 +535,8 @@
   }
 
   function renderRecepcao() {
-    const active = orders
-      .filter(o => o.status === 'aguardando' || o.status === 'em_preparo')
-      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    const pending = orders.filter(o => o.status === 'aguardando');
+    const inProgress = orders.filter(o => o.status === 'em_preparo');
     const done = orders.filter(o => o.status === 'entregue');
 
     return `
@@ -552,12 +551,22 @@
 
       <div class="orders-section">
         <div class="section-title">
-          🛵 Pedidos ativos
-          <span class="count-chip">${active.length}</span>
+          ⏳ Aguardando delivery
+          <span class="count-chip">${pending.length}</span>
         </div>
-        ${active.length === 0
-          ? '<div class="empty-state">Nenhum pedido no momento</div>'
-          : active.map(o => cardRecepcao(o)).join('')}
+        ${pending.length === 0
+          ? '<div class="empty-state">Nenhum pedido aguardando</div>'
+          : pending.map(o => cardRecepcao(o)).join('')}
+      </div>
+
+      <div class="orders-section">
+        <div class="section-title">
+          📦 Em preparo
+          <span class="count-chip">${inProgress.length}</span>
+        </div>
+        ${inProgress.length === 0
+          ? '<div class="empty-state">Nenhum pedido em preparo</div>'
+          : inProgress.map(o => cardRecepcao(o)).join('')}
       </div>
 
       ${done.length > 0 ? `
