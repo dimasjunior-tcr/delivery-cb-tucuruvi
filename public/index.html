@@ -522,6 +522,8 @@
   });
 
   // ── RENDER ──
+  let autoAckTimer = null;
+
   function renderApp() {
     const main = document.getElementById('main-content');
     if (session.role === 'recepcao') {
@@ -531,7 +533,19 @@
       });
     } else {
       main.innerHTML = renderDelivery();
+      scheduleAutoAck();
     }
+  }
+
+  function scheduleAutoAck() {
+    clearTimeout(autoAckTimer);
+    const aguardando = orders.filter(o => o.status === 'aguardando');
+    if (aguardando.length === 0) return;
+    autoAckTimer = setTimeout(() => {
+      aguardando.forEach(o => {
+        socket.emit('ack-order', { role: session.role, id: o.id });
+      });
+    }, 2000);
   }
 
   function renderRecepcao() {
@@ -693,12 +707,12 @@
     }
 
     return `
-      <div class="order-card status-aguardando pulse clickable" onclick="ackOrder(${o.id})" title="Clique para dar entrada no pedido">
+      <div class="order-card status-aguardando pulse">
         <div class="order-info">
           <div class="order-number">Pedido #${o.orderNumber}</div>
-          <div class="order-meta">Motoboy chegou às ${time} &nbsp;·&nbsp; <span class="status-chip chip-aguardando">Clique para dar entrada</span></div>
+          <div class="order-meta">Motoboy chegou às ${time} &nbsp;·&nbsp; <span class="status-chip chip-aguardando">Novo</span></div>
         </div>
-        <div style="font-size:1.5rem">👆</div>
+        <div style="font-size:1.5rem">🔔</div>
       </div>
     `;
   }
