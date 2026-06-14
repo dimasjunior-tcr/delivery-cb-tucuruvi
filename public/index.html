@@ -678,13 +678,10 @@
   }
 
   function renderDelivery() {
+    // aguardando + em_preparo juntos na mesma seção
     const pending = orders
-      .filter(o => o.status === 'aguardando')
+      .filter(o => o.status === 'aguardando' || o.status === 'em_preparo')
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    const inProgress = orders
-      .filter(o => o.status === 'em_preparo')
-      .sort((a, b) => new Date(b.ackedAt) - new Date(a.ackedAt));
 
     const sent = orders
       .filter(o => o.status === 'enviado' || o.status === 'entregue')
@@ -693,22 +690,12 @@
     return `
       <div class="orders-section">
         <div class="section-title">
-          🔔 Novos pedidos — clique para dar entrada
+          🔔 Novos pedidos — clique duplo para enviar
           <span class="count-chip">${pending.length}</span>
         </div>
         ${pending.length === 0
           ? '<div class="empty-state">Nenhum pedido aguardando</div>'
           : pending.map(o => cardDelivery(o)).join('')}
-      </div>
-
-      <div class="orders-section">
-        <div class="section-title">
-          📦 Em preparo — clique duplo para enviar
-          <span class="count-chip">${inProgress.length}</span>
-        </div>
-        ${inProgress.length === 0
-          ? '<div class="empty-state">Nenhum pedido em preparo</div>'
-          : inProgress.map(o => cardDelivery(o)).join('')}
       </div>
 
       <div class="orders-section">
