@@ -595,10 +595,11 @@
   });
 
   function renderRecepcao() {
-    const waiting  = orders.filter(o => o.status === 'aguardando');
+    const desc = (a, b) => new Date(b.createdAt) - new Date(a.createdAt);
+    const waiting    = orders.filter(o => o.status === 'aguardando').sort(desc);
     const inProgress = orders.filter(o => o.status === 'em_preparo').sort((a, b) => new Date(b.ackedAt) - new Date(a.ackedAt));
-    const sent     = orders.filter(o => o.status === 'enviado');
-    const done     = orders.filter(o => o.status === 'entregue');
+    const sent       = orders.filter(o => o.status === 'enviado').sort((a, b) => new Date(b.confirmedAt) - new Date(a.confirmedAt));
+    const done       = orders.filter(o => o.status === 'entregue').sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
 
     return `
       <div class="add-form">
