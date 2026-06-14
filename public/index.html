@@ -461,7 +461,6 @@
   <div class="alert-box">
     <div class="alert-icon">🔔</div>
     <h2>Novo Pedido!</h2>
-    <div class="order-hl" id="alert-order-number"></div>
     <p>Motoboy aguardando na recepção</p>
     <button class="btn btn-confirm" onclick="closeAlert()">Ver pedidos</button>
   </div>
@@ -471,7 +470,6 @@
   const socket = io();
   let session = null; // { username, role }
   let orders = [];
-  let alertQueue = [];
   let alertOpen = false;
 
   // ── AUTH ──
@@ -513,7 +511,7 @@
     if (!session) return;
     if (session.role === 'delivery') {
       playBell();
-      queueAlert(orderNumber);
+      queueAlert();
     }
   });
 
@@ -794,22 +792,15 @@
   }
 
   // ── ALERT OVERLAY ──
-  function queueAlert(orderNumber) {
-    alertQueue.push(orderNumber);
-    if (!alertOpen) showNextAlert();
-  }
-
-  function showNextAlert() {
-    if (alertQueue.length === 0) { alertOpen = false; return; }
+  function queueAlert() {
+    if (alertOpen) return;
     alertOpen = true;
-    const num = alertQueue.shift();
-    document.getElementById('alert-order-number').textContent = `#${num}`;
     document.getElementById('alert-overlay').classList.add('show');
   }
 
   function closeAlert() {
+    alertOpen = false;
     document.getElementById('alert-overlay').classList.remove('show');
-    setTimeout(showNextAlert, 400);
   }
 
   // ── ALARME ──
