@@ -535,9 +535,10 @@
   }
 
   function renderRecepcao() {
-    const pending = orders.filter(o => o.status === 'aguardando');
+    const waiting  = orders.filter(o => o.status === 'aguardando');
     const inProgress = orders.filter(o => o.status === 'em_preparo');
-    const done = orders.filter(o => o.status === 'entregue');
+    const sent     = orders.filter(o => o.status === 'enviado');
+    const done     = orders.filter(o => o.status === 'entregue');
 
     return `
       <div class="add-form">
@@ -551,12 +552,12 @@
 
       <div class="orders-section">
         <div class="section-title">
-          ⏳ Aguardando delivery
-          <span class="count-chip">${pending.length}</span>
+          ⏳ Esperando resposta delivery
+          <span class="count-chip">${waiting.length}</span>
         </div>
-        ${pending.length === 0
+        ${waiting.length === 0
           ? '<div class="empty-state">Nenhum pedido aguardando</div>'
-          : pending.map(o => cardRecepcao(o)).join('')}
+          : waiting.map(o => cardRecepcao(o)).join('')}
       </div>
 
       <div class="orders-section">
@@ -569,6 +570,16 @@
           : inProgress.map(o => cardRecepcao(o)).join('')}
       </div>
 
+      <div class="orders-section">
+        <div class="section-title">
+          🚀 Enviados para recepção
+          <span class="count-chip">${sent.length}</span>
+        </div>
+        ${sent.length === 0
+          ? '<div class="empty-state">Nenhum pedido enviado ainda</div>'
+          : sent.map(o => cardRecepcao(o)).join('')}
+      </div>
+
       ${done.length > 0 ? `
       <div class="orders-section">
         <div class="section-title">✅ Entregues</div>
@@ -578,14 +589,14 @@
   }
 
   function cardRecepcao(o) {
-    const chips = { aguardando: 'chip-aguardando', em_preparo: 'chip-em_preparo', entregue: 'chip-entregue' };
-    const labels = { aguardando: 'Aguardando', em_preparo: 'Em preparo', entregue: 'Entregue' };
+    const chips  = { aguardando: 'chip-aguardando', em_preparo: 'chip-em_preparo', enviado: 'chip-em_preparo', entregue: 'chip-entregue' };
+    const labels = { aguardando: 'Aguardando', em_preparo: 'Em preparo', enviado: 'Enviado', entregue: 'Entregue' };
     const time = new Date(o.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
     let actions = '';
     if (o.status === 'aguardando') {
       actions = `<button class="btn btn-cancel btn-sm" onclick="cancelOrder(${o.id})">Cancelar</button>`;
-    } else if (o.status === 'em_preparo') {
+    } else if (o.status === 'enviado') {
       actions = `<button class="btn btn-done btn-sm" onclick="completeOrder(${o.id})">✓ Entregue</button>`;
     }
 
@@ -605,25 +616,40 @@
   }
 
   function renderDelivery() {
-    // Aguardando: mais antigo primeiro (ASC)
+    // Aguardando (sem interação): mais antigo primeiro
     const pending = orders
       .filter(o => o.status === 'aguardando')
       .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
-    // Enviados + entregues: mais recente primeiro (DESC)
+    // Em preparo (clique simples): mais antigo primeiro
+    const inProgress = orders
+      .filter(o => o.status === 'em_preparo')
+      .sort((a, b) => new Date(a.ackedAt) - new Date(b.ackedAt));
+
+    // Enviados (clique duplo): mais recente primeiro
     const sent = orders
-      .filter(o => o.status === 'em_preparo' || o.status === 'entregue')
+      .filter(o => o.status === 'enviado' || o.status === 'entregue')
       .sort((a, b) => new Date(b.confirmedAt) - new Date(a.confirmedAt));
 
     return `
       <div class="orders-section">
         <div class="section-title">
-          🔔 Aguardando — clique para confirmar envio
+          🔔 Novos pedidos — clique para dar entrada
           <span class="count-chip">${pending.length}</span>
         </div>
         ${pending.length === 0
           ? '<div class="empty-state">Nenhum pedido aguardando</div>'
           : pending.map(o => cardDelivery(o)).join('')}
+      </div>
+
+      <div class="orders-section">
+        <div class="section-title">
+          📦 Em preparo — clique duplo para enviar
+          <span class="count-chip">${inProgress.length}</span>
+        </div>
+        ${inProgress.length === 0
+          ? '<div class="empty-state">Nenhum pedido em preparo</div>'
+          : inProgress.map(o => cardDelivery(o)).join('')}
       </div>
 
       <div class="orders-section">
@@ -639,10 +665,9 @@
   }
 
   function cardDelivery(o) {
-    const isSent = o.status === 'em_preparo';
     const time = new Date(o.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-    if (isSent) {
+    if (o.status === 'enviado' || o.status === 'entregue') {
       const sentTime = new Date(o.confirmedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       return `
         <div class="order-card delivery-sent">
@@ -655,11 +680,23 @@
       `;
     }
 
+    if (o.status === 'em_preparo') {
+      return `
+        <div class="order-card status-em_preparo pulse clickable" ondblclick="confirmOrder(${o.id})" title="Clique duplo para enviar para recepção">
+          <div class="order-info">
+            <div class="order-number">Pedido #${o.orderNumber}</div>
+            <div class="order-meta">Motoboy chegou às ${time} &nbsp;·&nbsp; <span class="status-chip chip-em_preparo">Clique duplo para enviar</span></div>
+          </div>
+          <div style="font-size:1.5rem">📦</div>
+        </div>
+      `;
+    }
+
     return `
-      <div class="order-card status-aguardando pulse clickable" ondblclick="confirmOrder(${o.id})" title="Clique duplo para confirmar envio">
+      <div class="order-card status-aguardando pulse clickable" onclick="ackOrder(${o.id})" title="Clique para dar entrada no pedido">
         <div class="order-info">
           <div class="order-number">Pedido #${o.orderNumber}</div>
-          <div class="order-meta">Motoboy chegou às ${time} &nbsp;·&nbsp; <span class="status-chip chip-aguardando">Clique duplo para confirmar</span></div>
+          <div class="order-meta">Motoboy chegou às ${time} &nbsp;·&nbsp; <span class="status-chip chip-aguardando">Clique para dar entrada</span></div>
         </div>
         <div style="font-size:1.5rem">👆</div>
       </div>
@@ -678,9 +715,14 @@
     setTimeout(() => showFormFeedback('', ''), 3000);
   }
 
+  function ackOrder(id) {
+    socket.emit('ack-order', { role: session.role, id });
+    showToast('📦 Pedido em preparo!', 'info');
+  }
+
   function confirmOrder(id) {
     socket.emit('confirm-order', { role: session.role, id });
-    showToast('✅ Confirmado! Enviando para a recepção.', 'success');
+    showToast('🚀 Enviado para a recepção!', 'success');
   }
 
   function completeOrder(id) {
