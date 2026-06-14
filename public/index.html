@@ -517,8 +517,14 @@
     }
   });
 
+  socket.on('order-added', ({ orderNumber }) => {
+    showFormFeedback(`Pedido #${orderNumber} adicionado!`, 'success');
+    setTimeout(() => showFormFeedback('', ''), 3000);
+  });
+
   socket.on('order-error', (msg) => {
     showFormFeedback(msg, 'error');
+    setTimeout(() => showFormFeedback('', ''), 4000);
   });
 
   // ── RENDER ──
@@ -723,8 +729,6 @@
     socket.emit('add-order', { role: session.role, orderNumber: val });
     input.value = '';
     input.focus();
-    showFormFeedback(`Pedido #${val} adicionado!`, 'success');
-    setTimeout(() => showFormFeedback('', ''), 3000);
   }
 
   function ackOrder(id) {
