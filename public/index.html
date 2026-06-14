@@ -598,7 +598,7 @@
 
   function renderRecepcao() {
     const waiting  = orders.filter(o => o.status === 'aguardando');
-    const inProgress = orders.filter(o => o.status === 'em_preparo');
+    const inProgress = orders.filter(o => o.status === 'em_preparo').sort((a, b) => new Date(b.ackedAt) - new Date(a.ackedAt));
     const sent     = orders.filter(o => o.status === 'enviado');
     const done     = orders.filter(o => o.status === 'entregue');
 
