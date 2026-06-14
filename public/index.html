@@ -529,6 +529,7 @@
 
   // ── RENDER ──
   let autoAckTimer = null;
+  let waitTimerInterval = null;
 
   function renderApp() {
     const main = document.getElementById('main-content');
@@ -541,19 +542,59 @@
       main.innerHTML = renderDelivery();
       scheduleAutoAck();
     }
+    startWaitTimer();
+  }
+
+  // Atualiza os timers de espera a cada segundo sem re-renderizar tudo
+  function startWaitTimer() {
+    clearInterval(waitTimerInterval);
+    waitTimerInterval = setInterval(() => {
+      document.querySelectorAll('[data-created]').forEach(el => {
+        el.textContent = timeAgo(el.getAttribute('data-created'));
+      });
+    }, 1000);
+  }
+
+  function timeAgo(isoDate) {
+    const diff = Math.floor((Date.now() - new Date(isoDate)) / 1000);
+    if (diff < 60) return `há ${diff}s`;
+    const m = Math.floor(diff / 60);
+    const s = diff % 60;
+    return s > 0 ? `há ${m}min ${s}s` : `há ${m}min`;
+  }
+
+  function isPageVisible() {
+    return document.visibilityState === 'visible' && document.hasFocus();
   }
 
   function scheduleAutoAck() {
     clearTimeout(autoAckTimer);
     const aguardando = orders.filter(o => o.status === 'aguardando');
     if (aguardando.length === 0) return;
+    if (!isPageVisible()) return;
     autoAckTimer = setTimeout(() => {
+      if (!isPageVisible()) return;
       stopAlarm();
       aguardando.forEach(o => {
         socket.emit('ack-order', { role: session.role, id: o.id });
       });
-    }, 10000);
+    }, 3000);
   }
+
+  document.addEventListener('visibilitychange', () => {
+    if (session && session.role === 'delivery') {
+      if (document.visibilityState === 'visible') scheduleAutoAck();
+      else clearTimeout(autoAckTimer);
+    }
+  });
+
+  window.addEventListener('focus', () => {
+    if (session && session.role === 'delivery') scheduleAutoAck();
+  });
+
+  window.addEventListener('blur', () => {
+    clearTimeout(autoAckTimer);
+  });
 
   function renderRecepcao() {
     const waiting  = orders.filter(o => o.status === 'aguardando');
@@ -691,7 +732,7 @@
         <div class="order-card delivery-sent">
           <div class="order-info">
             <div class="order-number">Pedido #${o.orderNumber}</div>
-            <div class="order-meta">Motoboy chegou às ${time} &nbsp;·&nbsp; Enviado às ${sentTime}</div>
+            <div class="order-meta">Chegou às ${time} &nbsp;·&nbsp; Enviado às ${sentTime} &nbsp;·&nbsp; <span data-created="${o.createdAt}">${timeAgo(o.createdAt)}</span></div>
           </div>
           <div style="font-size:1.5rem">✅</div>
         </div>
@@ -703,7 +744,7 @@
         <div class="order-card status-em_preparo pulse clickable" ondblclick="confirmOrder(${o.id})" title="Clique duplo para enviar para recepção">
           <div class="order-info">
             <div class="order-number">Pedido #${o.orderNumber}</div>
-            <div class="order-meta">Motoboy chegou às ${time} &nbsp;·&nbsp; <span class="status-chip chip-em_preparo">Clique duplo para enviar</span></div>
+            <div class="order-meta">Chegou às ${time} &nbsp;·&nbsp; <span data-created="${o.createdAt}">${timeAgo(o.createdAt)}</span> &nbsp;·&nbsp; <span class="status-chip chip-em_preparo">Clique duplo para enviar</span></div>
           </div>
           <div style="font-size:1.5rem">📦</div>
         </div>
@@ -714,7 +755,7 @@
       <div class="order-card status-aguardando pulse">
         <div class="order-info">
           <div class="order-number">Pedido #${o.orderNumber}</div>
-          <div class="order-meta">Motoboy chegou às ${time} &nbsp;·&nbsp; <span class="status-chip chip-aguardando">Novo</span></div>
+          <div class="order-meta">Chegou às ${time} &nbsp;·&nbsp; <span data-created="${o.createdAt}">${timeAgo(o.createdAt)}</span></div>
         </div>
         <div style="font-size:1.5rem">🔔</div>
       </div>
