@@ -57,6 +57,7 @@ io.on('connection', (socket) => {
     orders.push(order);
     io.emit('orders-update', orders);
     io.emit('new-order-alert', { orderNumber: trimmed });
+    socket.emit('order-added', { orderNumber: trimmed });
   });
 
   // Delivery clique simples → viu o pedido → em_preparo
