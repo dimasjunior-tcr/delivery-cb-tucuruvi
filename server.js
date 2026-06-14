@@ -8,6 +8,10 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(express.json());
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Usuários do sistema (pode alterar senhas aqui)
