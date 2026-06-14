@@ -630,17 +630,14 @@
   }
 
   function renderDelivery() {
-    // Aguardando (sem interação): mais antigo primeiro
     const pending = orders
       .filter(o => o.status === 'aguardando')
-      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    // Em preparo (clique simples): mais antigo primeiro
     const inProgress = orders
       .filter(o => o.status === 'em_preparo')
-      .sort((a, b) => new Date(a.ackedAt) - new Date(b.ackedAt));
+      .sort((a, b) => new Date(b.ackedAt) - new Date(a.ackedAt));
 
-    // Enviados (clique duplo): mais recente primeiro
     const sent = orders
       .filter(o => o.status === 'enviado' || o.status === 'entregue')
       .sort((a, b) => new Date(b.confirmedAt) - new Date(a.confirmedAt));
