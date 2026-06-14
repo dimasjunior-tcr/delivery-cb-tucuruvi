@@ -59,20 +59,33 @@ io.on('connection', (socket) => {
     io.emit('new-order-alert', { orderNumber: trimmed });
   });
 
-  socket.on('confirm-order', ({ role, id }) => {
+  // Delivery clique simples → viu o pedido → em_preparo
+  socket.on('ack-order', ({ role, id }) => {
     if (role !== 'delivery') return;
     const order = orders.find((o) => o.id === id);
     if (order && order.status === 'aguardando') {
       order.status = 'em_preparo';
+      order.ackedAt = new Date().toISOString();
+      io.emit('orders-update', orders);
+    }
+  });
+
+  // Delivery clique duplo → enviando → enviado
+  socket.on('confirm-order', ({ role, id }) => {
+    if (role !== 'delivery') return;
+    const order = orders.find((o) => o.id === id);
+    if (order && order.status === 'em_preparo') {
+      order.status = 'enviado';
       order.confirmedAt = new Date().toISOString();
       io.emit('orders-update', orders);
     }
   });
 
+  // Recepção marca como entregue
   socket.on('complete-order', ({ role, id }) => {
     if (role !== 'recepcao') return;
     const order = orders.find((o) => o.id === id);
-    if (order && order.status === 'em_preparo') {
+    if (order && order.status === 'enviado') {
       order.status = 'entregue';
       order.completedAt = new Date().toISOString();
       io.emit('orders-update', orders);
