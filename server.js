@@ -102,6 +102,13 @@ io.on('connection', (socket) => {
     orders = orders.filter((o) => o.id !== id);
     io.emit('orders-update', orders);
   });
+
+  socket.on('clear-orders', ({ role }) => {
+    if (role !== 'recepcao') return;
+    orders = [];
+    orderIdCounter = 1;
+    io.emit('orders-update', orders);
+  });
 });
 
 function msUntilMidnight() {
